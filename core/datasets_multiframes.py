@@ -176,7 +176,7 @@ class MpiSintelTrain(FlowDatasetTest):
     def __init__(self, return_gt=True, input_frames=5, dstype='clean'):
         super(MpiSintelTrain, self).__init__(input_frames=input_frames, return_gt=return_gt)
 
-        root = 'datasets/Sintel/'
+        root = 'C:/dtt/datasets/'
 
         self.image_list = []
         self.flow_list = []
@@ -366,7 +366,7 @@ class MpiSintel(FlowDataset):
     def __init__(self, aug_params=None, input_frames=5, dstype='clean'):
         super(MpiSintel, self).__init__(aug_params=aug_params, input_frames=input_frames, oneside=True, sparse=False)
 
-        root = 'datasets/Sintel/'
+        root = 'C:/dtt/datasets/'
 
         self.image_list = []
         self.flow_list = []
@@ -539,15 +539,19 @@ def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
         train_dataset = clean_dataset + final_dataset
     elif args.stage == 'sintel':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.6, 'do_flip': True}
-        things = FlyingThings3D(aug_params, dstype='frames_cleanpass', input_frames=args.input_frames)
+        # things = FlyingThings3D(aug_params, dstype='frames_cleanpass', input_frames=args.input_frames)
         sintel_clean = MpiSintel(aug_params, dstype='clean', input_frames=args.input_frames)
         sintel_final = MpiSintel(aug_params, dstype='final', input_frames=args.input_frames)        
-        hd1k = HD1K({'crop_size': args.image_size, 'min_scale': -0.5, 'max_scale': 0.2, 'do_flip': True}, input_frames=args.input_frames)
-        kitti = KITTI({'crop_size': args.image_size, 'min_scale': -0.3, 'max_scale': 0.5, 'do_flip': True}, input_frames=args.input_frames)
+        # hd1k = HD1K({'crop_size': args.image_size, 'min_scale': -0.5, 'max_scale': 0.2, 'do_flip': True}, input_frames=args.input_frames)
+        # kitti = KITTI({'crop_size': args.image_size, 'min_scale': -0.3, 'max_scale': 0.5, 'do_flip': True}, input_frames=args.input_frames)
 
-        print("[dataset len: ]", len(things), len(sintel_clean), len(hd1k), len(kitti))
+        print("[dataset len: ]",  len(sintel_clean))
 
-        train_dataset = 100*sintel_clean + 100*sintel_final + 50*kitti + 5*hd1k + things
+        train_dataset = 10*sintel_clean + 10*sintel_final
+
+        # print("[dataset len: ]", len(things), len(sintel_clean), len(hd1k), len(kitti))
+
+        # train_dataset = 100*sintel_clean + 100*sintel_final + 50*kitti + 5*hd1k + things
     
     elif args.stage == 'kitti':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.4, 'do_flip': False}

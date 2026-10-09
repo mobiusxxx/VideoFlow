@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from .update import GMAUpdateBlock
 from ..encoders import twins_svt_large, convnext_Xlarge_4x, convnext_base_2x
 from .corr import CorrBlock, OLCorrBlock, AlternateCorrBlock
+from .cnn import BasicEncoder
 from ...utils.utils import bilinear_sampler, coords_grid, upflow8
 from .gma import Attention, Aggregate
 
@@ -55,7 +56,7 @@ class MOFNet(nn.Module):
             print("[Using stack.]")
             self.cfg.cost_heads_num = 1
             from .stack import SKUpdateBlock6_Deep_nopoolres_AllDecoder2
-            self.update_block = SKUpdateBlock6_Deep_nopoolres_AllDecoder2(args=self.cfg, hidden_dim=128//hidden_dim_ratio)
+            self.update_block = SKUpdateBlock6_Deep_nopoolres_AllDecoder2(args=self.cfg, hidden_dim=128 // hidden_dim_ratio)
         # elif self.cfg.Tfusion == 'resstack':
         #     print("[Using resstack.]")
         #     self.cfg.cost_heads_num = 1
@@ -83,7 +84,7 @@ class MOFNet(nn.Module):
                 nn.GELU(),
                 nn.Conv3d(256, 256, 3, stride=1, padding=1),
                 nn.GELU(),
-            )
+            )  # Gaussian Error Linear Unit（GELU）的激活函数，用于引入非线性特性到神经网络中。
 
     def initialize_flow(self, img, bs, down_ratio):
         """ Flow is represented as difference between two coordinate grids flow = coords1 - coords0"""
@@ -173,7 +174,7 @@ class MOFNet(nn.Module):
         forward_coords1, forward_coords0 = self.initialize_flow(images[:, 0, ...], bs=B*(N-2), down_ratio=down_ratio)
         backward_coords1, backward_coords0 = self.initialize_flow(images[:, 0, ...], bs=B*(N-2), down_ratio=down_ratio)
 
-        flow_predictions = [] # forward flows followed by backward flows
+        flow_predictions = []  # forward flows followed by backward flows
 
         motion_hidden_state = None
 
@@ -213,3 +214,4 @@ class MOFNet(nn.Module):
             return flow_predictions
         else:
             return flow_predictions[-1], flow_predictions[-1]
+            # return flow_predictions, flow_predictions

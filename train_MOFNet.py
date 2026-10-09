@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from core import optimizer
 import core.datasets_multiframes as datasets
-from core.loss import sequence_loss
+from core.loss import sequence_loss, sequence_loss_smooth
 from core.optimizer import fetch_optimizer
 from core.utils.misc import process_cfg
 from loguru import logger as loguru_logger
@@ -99,7 +99,7 @@ def train(cfg):
             logger.push(metrics)
             
             total_steps += 1
-
+            print("total_steps: ", total_steps)
             if total_steps > cfg.trainer.num_steps:
                 should_keep_training = False
                 break

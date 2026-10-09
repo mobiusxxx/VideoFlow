@@ -54,23 +54,24 @@ class Attention(nn.Module):
     def forward(self, fmap):
         heads, b, c, h, w = self.heads, *fmap.shape
 
-        q, k = self.to_qk(fmap).chunk(2, dim=1)
+        q, k = self.to_qk(fmap).chunk(2, dim=1)  # chunk(2, dim=1) 将返回的张量在第一个维度上（通道维度）进行切片，分成两部分，分别赋给 q 和 k。
 
-        q, k = map(lambda t: rearrange(t, 'b (h d) x y -> b h x y d', h=heads), (q, k))
-        q = self.scale * q
+        q, k = map(lambda t: rearrange(t, 'b (h d) x y -> b h x y d', h=heads), (q, k))  # rearrange 函数对 q 和 k 进行形状变换。
+        q = self.scale * q  # 为了调整注意力的强度。
 
-        # if self.args.position_only:
-        #     sim = self.pos_emb(q)
+        if self.args.position_only:
+            sim = self.pos_emb(q)  # 如果 position_only 为 True，则使用位置嵌入 self.pos_emb 对查询张量 q 进行处理，得到注意力分数张量 sim。
 
-        # elif self.args.position_and_content:
-        #     sim_content = einsum('b h x y d, b h u v d -> b h x y u v', q, k)
-        #     sim_pos = self.pos_emb(q)
-        #     sim = sim_content + sim_pos
+        elif self.args.position_and_content:
+            """同时考虑位置和内容信息。"""
+            sim_content = einsum('b h x y d, b h u v d -> b h x y u v', q, k)
+            sim_pos = self.pos_emb(q)
+            sim = sim_content + sim_pos
 
         # else:
-        sim = einsum('b h x y d, b h u v d -> b h x y u v', q, k)
+        sim = einsum('b h x y d, b h u v d -> b h x y u v', q, k)  # einsum 是爱因斯坦求和的缩写，用于执行张量的乘法和求和。计算了查询张量 q 和键张量 k 的乘积，得到注意力分数张量 sim。
 
-        sim = rearrange(sim, 'b h x y u v -> b h (x y) (u v)')
+        sim = rearrange(sim, 'b h x y u v -> b h (x y) (u v)')  # 重新排列张量维度的函数，通常用于执行张量的转置、变形等操作。
         attn = sim.softmax(dim=-1)
 
         return attn

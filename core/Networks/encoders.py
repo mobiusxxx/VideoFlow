@@ -1,8 +1,14 @@
 import torch
 import torch.nn as nn
 import timm
+import os
+# os.environ['HTTP_PROXY'] = 'https://127.0.0.1:10810'
+# os.environ['HTTPS_PROXY'] = 'https://127.0.0.1:10810'
+# os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+# # HF_ENDPOINT=https://hf-mirror.com python twins.py
+
 import numpy as np
-#from .twins_ft import _twins_svt_large_jihao
+# from .twins_ft import _twins_svt_large_jihao
 
 class twins_svt_large(nn.Module):
     def __init__(self, pretrained=True, del_layers=True):
@@ -37,7 +43,7 @@ class twins_svt_large(nn.Module):
             if i == layer-1:
                 break
         
-        return x
+        return x    # 返回最终的张量 x。这个张量经过模型的前向计算，具体的处理取决于模型中嵌入、丢弃、块操作和位置处理等步骤。
     
     def extract_ml_features(self, x, data=None, layer=2):
         res = []
@@ -58,7 +64,12 @@ class twins_svt_large(nn.Module):
             if i == layer-1:
                 break
         
-        return x1, x
+        return x1, x  # x1 是在指定层 layer-1 进行形状变换和维度排列后的特征，x 是模型的最终输出。这个方法允许从模型中提取多层的特征。
+
+
+
+
+
     
     def compute_params(self):
         num = 0
@@ -150,7 +161,7 @@ class convnext_base_2x(nn.Module):
 
 
 if __name__ == "__main__":
-    m = convnext_Xlarge_2x()
+    m = convnext_Xlarge_2x()  # convnext_Xlarge_4x()
     input = torch.randn(2, 3, 64, 64)
     out = m(input)
     print(out.shape)

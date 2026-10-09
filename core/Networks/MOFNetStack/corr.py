@@ -1,3 +1,5 @@
+# CorrBlock完全同RAFT中的CorrBlock
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -56,6 +58,7 @@ class OLCorrBlock:
         return out.permute(0, 3, 1, 2).float()
 
 
+# 同RAFT中相同模块
 class CorrBlock:
     def __init__(self, fmap1, fmap2, num_levels=4, radius=4):
         self.num_levels = num_levels
@@ -107,6 +110,7 @@ class CorrBlock:
         return corr / torch.sqrt(torch.tensor(dim).float())
 
 
+# 同RAFT中
 class CorrBlockSingleScale(nn.Module):
     def __init__(self, fmap1, fmap2, num_levels=4, radius=4):
         super().__init__()
@@ -146,6 +150,8 @@ class CorrBlockSingleScale(nn.Module):
         corr = corr.view(batch, ht, wd, 1, ht, wd)
         return corr / torch.sqrt(torch.tensor(dim).float())
 
+
+# 同RAFT中相同模块
 class AlternateCorrBlock:
     def __init__(self, fmap1, fmap2, num_levels=4, radius=4):
         self.num_levels = num_levels
@@ -153,7 +159,7 @@ class AlternateCorrBlock:
 
         self.pyramid = [(fmap1, fmap2)]
         for i in range(self.num_levels):
-            #fmap1 = F.avg_pool2d(fmap1, 2, stride=2)
+            fmap1 = F.avg_pool2d(fmap1, 2, stride=2)
             fmap2 = F.avg_pool2d(fmap2, 2, stride=2)
             self.pyramid.append((None, fmap2))
 

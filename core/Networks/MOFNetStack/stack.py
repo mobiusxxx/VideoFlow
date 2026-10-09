@@ -9,13 +9,13 @@ class PCBlock4_Deep_nopool_res(nn.Module):
     def __init__(self, C_in, C_out, k_conv):
         super().__init__()
         self.conv_list = nn.ModuleList([
-            nn.Conv2d(C_in, C_in, kernel, stride=1, padding=kernel//2, groups=C_in) for kernel in k_conv])
+            nn.Conv2d(C_in, C_in, kernel, stride=1, padding=kernel//2, groups=C_in) for kernel in k_conv])  # 这些卷积层使用深度可分离卷积，即 groups=C_in，并且卷积核大小从 k_conv 中取值。
 
         self.ffn1 = nn.Sequential(
             nn.Conv2d(C_in, int(1.5*C_in), 1, padding=0),
             nn.GELU(),
             nn.Conv2d(int(1.5*C_in), C_in, 1, padding=0),
-        )
+        )  # 构建第一个 Feed-Forward 网络。FFN层
         self.pw = nn.Conv2d(C_in, C_in, 1, padding=0)
         self.ffn2 = nn.Sequential(
             nn.Conv2d(C_in, int(1.5*C_in), 1, padding=0),
@@ -24,9 +24,9 @@ class PCBlock4_Deep_nopool_res(nn.Module):
         )
 
     def forward(self, x):
-        x = F.gelu(x + self.ffn1(x))
+        x = F.gelu(x + self.ffn1(x))  # 将输入张量 x 与第一个 Feed-Forward 网络的输出进行残差连接，并通过 GELU 激活函数激活。
         for conv in self.conv_list:
-            x = F.gelu(x + conv(x))
+            x = F.gelu(x + conv(x))  # 对模型中的每个深度可分离卷积层进行遍历，将输入张量 x 与每个卷积层的输出进行残差连接，并通过 GELU 激活函数激活。
         x = F.gelu(x + self.pw(x))
         x = self.ffn2(x)
         return x
@@ -34,6 +34,7 @@ class PCBlock4_Deep_nopool_res(nn.Module):
 class velocity_update_block(nn.Module):
     def __init__(self, C_in=43+128+43, C_out=43, C_hidden=64):
         super().__init__()
+        # 多层感知机（MLP）
         self.mlp = nn.Sequential(
             nn.Conv2d(C_in, C_hidden, 3, padding=1),
             nn.GELU(),
@@ -48,8 +49,8 @@ class velocity_update_block(nn.Module):
 class SKMotionEncoder6_Deep_nopool_res(nn.Module):
     def __init__(self, args):
         super().__init__()
-        self.cor_planes = cor_planes = (args.corr_radius*2+1)**2*args.cost_heads_num*args.corr_levels
-        self.convc1 = PCBlock4_Deep_nopool_res(cor_planes, 128, k_conv=args.k_conv)
+        self.cor_planes = cor_planes = (args.corr_radius*2+1)**2*args.cost_heads_num*args.corr_levels  # 表示相关性平面的数量。
+        self.convc1 = PCBlock4_Deep_nopool_res(cor_planes, 128, k_conv=args.k_conv)  # CorrEncoder相关编码器
         self.convc2 = PCBlock4_Deep_nopool_res(256, 192, k_conv=args.k_conv)
 
         self.init_hidden_state = nn.Parameter(torch.randn(1, 1, 48, 1, 1))
@@ -84,18 +85,21 @@ class SKMotionEncoder6_Deep_nopool_res(nn.Module):
         forward_motion_hidden_state = torch.cat([motion_hidden_state[:, 1:, ...], torch.zeros(bs, 1, 48, H, W).to(motion_hidden_state.device)], dim=1).reshape(BN, -1, H, W)
         forward_motion_hidden_state = self.sample_flo_feat(forward_loc, forward_motion_hidden_state)
         backward_motion_hidden_state = torch.cat([torch.zeros(bs, 1, 48, H, W).to(motion_hidden_state.device), motion_hidden_state[:, :N-1, ...]], dim=1).reshape(BN, -1, H, W)
-        backward_motion_hidden_state = self.sample_flo_feat(backward_loc, backward_motion_hidden_state)
+        backward_motion_hidden_state = self.sample_flo_feat(backward_loc, backward_motion_hidden_state)   # 根据前向和后向的光流信息对运动的隐藏状态进行更新，以适应时间上的运动变化。
 
+        # CorrEncoder相关编码器，得到相关性特征
         forward_cor = self.convc1(forward_corr)
         backward_cor = self.convc1(backward_corr)
         cor = F.gelu(torch.cat([forward_cor, backward_cor], dim=1))
         cor = self.convc2(cor)
 
+        # FlowEncoder光流编码器，得到光流特征
         flow = torch.cat([forward_flow, backward_flow], dim=1)
         flo = self.convf1_(flow)
         flo = self.convf2(flo)
 
-        cor_flo = torch.cat([cor, flo, forward_motion_hidden_state, backward_motion_hidden_state, motion_hidden_state.reshape(BN, -1, H, W)], dim=1)
+        # MotionEncoderTROF TROF运动特征编码器，得到双向运动特征
+        cor_flo = torch.cat([cor, flo, forward_motion_hidden_state, backward_motion_hidden_state, motion_hidden_state.reshape(BN, -1, H, W)], dim=1)   # 更新GRU的隐藏状态
         out = self.conv(cor_flo)
 
         out, motion_hidden_state = torch.split(out, [124, 48], dim=1)
